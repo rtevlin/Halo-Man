@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="15" height="15" tilewidth="32" tileheight="32" nextobjectid="1">
+ <tileset firstgid="1" name="grass-tiles-2-small" tilewidth="32" tileheight="32" tilecount="48">
+  <image source="tmw_desert_spacing.png" width="265" height="199"/>
+ </tileset>
+ <layer name="Tile Layer 1" width="15" height="15">
+  <data encoding="base64" compression="zlib">
+   eJxTYmBgUKIAkwNG9RJWT4m9Skg0Ib3IakixF10tLjNx6SHGPaQCStIqLfUSwgCOZQoZ
+  </data>
+ </layer>
+</map>

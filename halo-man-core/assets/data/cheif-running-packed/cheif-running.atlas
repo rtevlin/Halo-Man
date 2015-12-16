@@ -1,0 +1,27 @@
+
+cheif-running.png
+size: 128,64
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+Sprite-0004
+  rotate: false
+  xy: 2, 2
+  size: 32, 32
+  orig: 32, 32
+  offset: 0, 0
+  index: -1
+Sprite-0005
+  rotate: false
+  xy: 36, 2
+  size: 32, 32
+  orig: 32, 32
+  offset: 0, 0
+  index: -1
+Sprite-0006
+  rotate: false
+  xy: 70, 2
+  size: 32, 32
+  orig: 32, 32
+  offset: 0, 0
+  index: -1
