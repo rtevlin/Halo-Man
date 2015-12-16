@@ -14,11 +14,16 @@ import com.haloman.game.entity.Components.RenderableComponent;
 import com.haloman.game.entity.Components.VelocityComponent;
 import com.haloman.game.input.InputListener;
 import com.haloman.game.resource.Assets;
+import com.haloman.game.state.Position;
 
-public class Player extends GameObject implements InputListener {
+public class Player extends MovingObject implements InputListener {
 	
 	private PlayerState state;
 	private float speed = 100.0f;
+	private float slideSpeed = 200.0f;
+	private float slideTravel = 0f;
+	private float directionX = 1;
+	private boolean[] keys = new boolean[150];
 	
 	private static Map<PlayerState, Animation> stateAnimations = new HashMap<PlayerState, Animation>();
 	private static Map<PlayerState, Rectangle> stateCollisions = new HashMap<PlayerState, Rectangle>();
@@ -61,44 +66,60 @@ public class Player extends GameObject implements InputListener {
 
 	@Override
 	public void inputPressed(int key) {
+		keys[key] = true;
+		VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
+		boolean changedDirX = false;
+		if(key == Keys.LEFT) {
+			changedDirX = directionX == 1;
+			directionX = -1;
+		}
+		else if(key == Keys.RIGHT) {
+			changedDirX = directionX == -1;
+			directionX = 1;
+		}
+		
 		if(key == Keys.LEFT || key == Keys.RIGHT) {
 			if(!state.equals(PlayerState.AIRBORNE)) {
 				changeState(PlayerState.RUNNING);
 			}
+			if((Math.abs(velocity.x) < speed) || changedDirX || PlayerState.RUNNING.equals(state)) {
+				velocity.x = speed * directionX;
+			}
+			Components.mappers.RENDERABLE.get(this).flipped = directionX < 0;
 		}
-		if(key == Keys.LEFT) {
-			Components.mappers.VELOCITY.get(this).x = -speed;
-			Components.mappers.RENDERABLE.get(this).flipped = true;
-		}
-		else if(key == Keys.RIGHT) {
-			Components.mappers.VELOCITY.get(this).x = speed;
-			Components.mappers.RENDERABLE.get(this).flipped = false;
-		}
+		
 		else if(key == Keys.SPACE) {
 			if(!state.equals(PlayerState.AIRBORNE)) {
 				Components.mappers.VELOCITY.get(this).y = 400.0f;
+			}
+		}
+		else if(key == Keys.CONTROL_LEFT) {
+			if(!PlayerState.AIRBORNE.equals(state)) {
+				changeState(PlayerState.SLIDING);
+				velocity.x = slideSpeed * directionX;
 			}
 		}
 	}
 
 	@Override
 	public void inputReleased(int key) {
+		keys[key] = false;
 		VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
 		if((key == Keys.LEFT && velocity.x < 0) || (key == Keys.RIGHT && velocity.x > 0)) {
-			velocity.x = 0f;
-			changeState(PlayerState.NEUTRAL);
+			if(!PlayerState.AIRBORNE.equals(state)) {
+				velocity.x = 0f;
+				changeState(PlayerState.NEUTRAL);
+			}
 		}
 		else if(key == Keys.SPACE) {
 			if(velocity.y > 0f) {
 				Components.mappers.VELOCITY.get(this).y = 0f;
 			}
 		}
-		else if(key == Keys.CONTROL_LEFT) {
-			changeState(PlayerState.SLIDING);
-		}
 	}
 	
 	private void changeState(PlayerState newState) {
+		slideTravel = 0;
 		this.state = newState;
 		Animation animation = stateAnimations.get(state);
 		Rectangle collisionRect = stateCollisions.get(state);
@@ -109,19 +130,33 @@ public class Player extends GameObject implements InputListener {
 	}
 	
 	@Override
-	public void update(String str) {
-		if("AIRBORNE".equals(str)) {
+	public void notifyPositionUpdate(Position position, float deltaX, float deltaY) {
+		if(PlayerState.SLIDING.equals(state)) {
+			slideTravel += deltaX;
+			if(deltaX == 0f || Math.abs(slideTravel) >= 100f) {
+				VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
+				changeState(PlayerState.NEUTRAL);
+				velocity.x = 0f;
+			}
+		}
+		if(Position.AIRBORNE.equals(position)) {
 			changeState(PlayerState.AIRBORNE);
 		}
-		else if("GROUNDED".equals(str)) {
+		else if(Position.GROUNDED.equals(position)) {
 			VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
 			if(velocity.x == 0) {
 				changeState(PlayerState.NEUTRAL);
 			}
 			else {
-				changeState(PlayerState.RUNNING);
+				if(keys[Keys.LEFT] || keys[Keys.RIGHT]) {
+					velocity.x = speed * directionX;
+					changeState(PlayerState.RUNNING);
+				}
+				else {
+					velocity.x = 0;
+					changeState(PlayerState.NEUTRAL);
+				}
 			}
 		}
 	}
-
 }

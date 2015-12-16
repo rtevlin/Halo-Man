@@ -41,10 +41,10 @@ public class RenderingSystem extends IteratingSystem {
         		region.getRegionHeight());
         batch.end();
         
-        shapeRenderer.begin(ShapeType.Line);
+      /*  shapeRenderer.begin(ShapeType.Line);
         shapeRenderer.setColor(Color.RED);
         shapeRenderer.rect(position.x + collision.rectangle.x, position.y + collision.rectangle.y, collision.rectangle.width, collision.rectangle.height);
-        shapeRenderer.end();
+        shapeRenderer.end();*/
     }
 
 }

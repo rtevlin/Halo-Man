@@ -11,7 +11,8 @@ import com.haloman.game.entity.Components;
 import com.haloman.game.entity.Components.CollisionComponent;
 import com.haloman.game.entity.Components.PositionComponent;
 import com.haloman.game.entity.Components.VelocityComponent;
-import com.haloman.game.entity.GameObject;
+import com.haloman.game.entity.MovingObject;
+import com.haloman.game.state.Position;
 
 public class MovementSystem extends IteratingSystem {
 
@@ -30,7 +31,7 @@ public class MovementSystem extends IteratingSystem {
 		VelocityComponent velocity = Components.mappers.VELOCITY.get(entity);		
 		PositionComponent position = Components.mappers.POSITION.get(entity);
 		CollisionComponent collision = Components.mappers.COLLISION.get(entity);
-		GameObject owner = Components.mappers.OWNER.get(entity).owner;
+		MovingObject owner = (MovingObject)Components.mappers.OWNER.get(entity).owner;
 
 		float oldX = position.x;
 		float oldY = position.y;
@@ -80,10 +81,13 @@ public class MovementSystem extends IteratingSystem {
 			velocity.y = 0;
 			position.y = block.rectangle.y + tileH - 1;
 			if(oldY != position.y) {
-				owner.update("GROUNDED");
+				owner.notifyPositionUpdate(Position.GROUNDED, position.x - oldX, position.y - oldY);
+			}
+			else {
+				owner.notifyPositionUpdate(null, position.x - oldX, position.y - oldY);
 			}
 		} else {
-			owner.update("AIRBORNE");
+			owner.notifyPositionUpdate(Position.AIRBORNE, position.x - oldX, position.y - oldY);
 			if(velocity.y <= MAX_VELOCITY) {
 				velocity.y -= 20.0f;
 			}
@@ -129,12 +133,7 @@ public class MovementSystem extends IteratingSystem {
 	}
 	
 	private static Block checkRightBlocks(TiledMapTileLayer collisionLayer, int cellX, int cellY, Rectangle collisionRectangle) {
-		Block block = checkBlock(collisionLayer, cellX, cellY, collisionRectangle);
-		if(block != null) {
-			return block;
-		}
-		
-		block = checkBlock(collisionLayer, cellX + 1, cellY, collisionRectangle);
+		Block block = checkBlock(collisionLayer, cellX + 1, cellY , collisionRectangle);
 		if(block != null) {
 			return block;
 		}
@@ -147,13 +146,8 @@ public class MovementSystem extends IteratingSystem {
 		return null;
 	}
 	
-	private static Block checkLeftBlocks(TiledMapTileLayer collisionLayer, int cellX, int cellY, Rectangle collisionRectangle) {
-		Block block = checkBlock(collisionLayer, cellX, cellY, collisionRectangle);
-		if(block != null) {
-			return block;
-		}
-		
-		block = checkBlock(collisionLayer, cellX - 1, cellY, collisionRectangle);
+	private static Block checkLeftBlocks(TiledMapTileLayer collisionLayer, int cellX, int cellY, Rectangle collisionRectangle) {		
+		Block block = checkBlock(collisionLayer, cellX - 1, cellY, collisionRectangle);
 		if(block != null) {
 			return block;
 		}
@@ -182,7 +176,7 @@ public class MovementSystem extends IteratingSystem {
 	}
 	
 	public static boolean overlaps (Rectangle r1, Rectangle r2) {
-	  return r1.x <= r2.x + r2.width && r1.x + r1.width >= r2.x && r1.y <= r2.y + r2.height && r1.y + r1.height >= r2.y;
+	  return r1.x <= r2.x + r2.width && r1.x + r1.width >= r2.x && r1.y < r2.y + r2.height && r1.y + r1.height > r2.y;
 	}
 
 	private static class Block {
