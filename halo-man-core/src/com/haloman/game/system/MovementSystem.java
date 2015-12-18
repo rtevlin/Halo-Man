@@ -53,6 +53,7 @@ public class MovementSystem extends IteratingSystem {
 			Block block = checkRightBlocks(collisionLayer, cellX, cellY, collisionRectangle);
 			if(block != null) {
 				position.x = oldX;
+				velocity.x = 0f;
 				collisionRectangle.x = position.x + collision.rectangle.x;
 				cellX = (int)(( (position.x + collision.rectangle.x) + (collision.rectangle.width / 2) ) / tileW);
 			}
@@ -61,6 +62,7 @@ public class MovementSystem extends IteratingSystem {
 			Block block = checkLeftBlocks(collisionLayer, cellX, cellY, collisionRectangle);
 			if(block != null) {
 				position.x = oldX;
+				velocity.x = 0f;
 				collisionRectangle.x = position.x + collision.rectangle.x;
 				cellX = (int)(( (position.x + collision.rectangle.x) + (collision.rectangle.width / 2) ) / tileW);
 			}

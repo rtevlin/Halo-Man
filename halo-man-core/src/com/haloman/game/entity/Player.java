@@ -18,11 +18,22 @@ import com.haloman.game.state.Position;
 
 public class Player extends MovingObject implements InputListener {
 	
+	/** current action state of the entity */
 	private PlayerState state;
+	
+	/** speed for regular movement (ie. running) */
 	private float speed = 100.0f;
+	
+	/** speed for sliding */
 	private float slideSpeed = 200.0f;
+	
+	/** distance that has been traveled while sliding */
 	private float slideTravel = 0f;
+	
+	/** which direction the entity is facing. 1 for right and -1 for left */
 	private float directionX = 1;
+	
+	/** state of input keys */
 	private boolean[] keys = new boolean[150];
 	
 	private static Map<PlayerState, Animation> stateAnimations = new HashMap<PlayerState, Animation>();
@@ -79,9 +90,10 @@ public class Player extends MovingObject implements InputListener {
 		}
 		
 		if(key == Keys.LEFT || key == Keys.RIGHT) {
-			if(!state.equals(PlayerState.AIRBORNE)) {
+			if(!this.isAirborne() || (this.isSliding() && changedDirX)) {
 				changeState(PlayerState.RUNNING);
 			}
+			// allows horizontal momentum to be while continuing in the same direction (for example a slide jump) 
 			if((Math.abs(velocity.x) < speed) || changedDirX || PlayerState.RUNNING.equals(state)) {
 				velocity.x = speed * directionX;
 			}
@@ -89,14 +101,13 @@ public class Player extends MovingObject implements InputListener {
 		}
 		
 		else if(key == Keys.SPACE) {
-			if(!state.equals(PlayerState.AIRBORNE)) {
+			if(!this.isAirborne()) {
 				Components.mappers.VELOCITY.get(this).y = 400.0f;
 			}
 		}
 		else if(key == Keys.CONTROL_LEFT) {
-			if(!PlayerState.AIRBORNE.equals(state)) {
+			if(!this.isAirborne() && !this.isSliding()) {
 				changeState(PlayerState.SLIDING);
-				velocity.x = slideSpeed * directionX;
 			}
 		}
 	}
@@ -105,12 +116,17 @@ public class Player extends MovingObject implements InputListener {
 	public void inputReleased(int key) {
 		keys[key] = false;
 		VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
-		if((key == Keys.LEFT && velocity.x < 0) || (key == Keys.RIGHT && velocity.x > 0)) {
-			if(!PlayerState.AIRBORNE.equals(state)) {
-				velocity.x = 0f;
+		
+		// -------- Release left/right movement -----------
+		if((key == Keys.LEFT && velocity.x <= 0) || (key == Keys.RIGHT && velocity.x >= 0)) {
+			velocity.x = 0f;
+			if(!this.isAirborne()) {
 				changeState(PlayerState.NEUTRAL);
 			}
 		}
+		
+		// -------- Release jump -----------
+		// vertical velocity is removed when you release therefore allowing you to begin falling after release
 		else if(key == Keys.SPACE) {
 			if(velocity.y > 0f) {
 				Components.mappers.VELOCITY.get(this).y = 0f;
@@ -121,6 +137,18 @@ public class Player extends MovingObject implements InputListener {
 	private void changeState(PlayerState newState) {
 		slideTravel = 0;
 		this.state = newState;
+		
+		VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
+		if(PlayerState.NEUTRAL.equals(newState)) {
+			velocity.x = 0f;
+		}
+		else if(PlayerState.RUNNING.equals(newState)) {
+			velocity.x = speed * directionX;
+		}
+		else if(PlayerState.SLIDING.equals(newState)) {
+			velocity.x = slideSpeed * directionX;
+		}
+		
 		Animation animation = stateAnimations.get(state);
 		Rectangle collisionRect = stateCollisions.get(state);
 		if(animation != null) {
@@ -131,32 +159,46 @@ public class Player extends MovingObject implements InputListener {
 	
 	@Override
 	public void notifyPositionUpdate(Position position, float deltaX, float deltaY) {
-		if(PlayerState.SLIDING.equals(state)) {
+		VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
+		
+		// Player is currently sliding
+		if(this.isSliding()) {
 			slideTravel += deltaX;
 			if(deltaX == 0f || Math.abs(slideTravel) >= 100f) {
-				VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
+				// slide is over if you didnt move at all horizontally (collision), or you moved the maximum slide distance
 				changeState(PlayerState.NEUTRAL);
-				velocity.x = 0f;
 			}
 		}
+		
+		// Player has *just become* airborne
 		if(Position.AIRBORNE.equals(position)) {
 			changeState(PlayerState.AIRBORNE);
 		}
+		
+		// Player has *just become* grounded
 		else if(Position.GROUNDED.equals(position)) {
-			VelocityComponent velocity = Components.mappers.VELOCITY.get(this);
-			if(velocity.x == 0) {
+			// you land on the ground while holding a direction
+			if(keys[Keys.LEFT] || keys[Keys.RIGHT]) {
+				changeState(PlayerState.RUNNING);
+			}
+			// you land on the ground without moving
+			else {
 				changeState(PlayerState.NEUTRAL);
 			}
-			else {
-				if(keys[Keys.LEFT] || keys[Keys.RIGHT]) {
-					velocity.x = speed * directionX;
-					changeState(PlayerState.RUNNING);
-				}
-				else {
-					velocity.x = 0;
-					changeState(PlayerState.NEUTRAL);
-				}
-			}
 		}
+		
+		// horizontal velocity could become 0 in the event that you hit a wall while running, but you may still be holding the
+		// directional you want to go - so update the velocity again
+		if(velocity.x == 0 && (keys[Keys.LEFT] || keys[Keys.RIGHT])) {
+			velocity.x = speed * directionX;
+		}
+	}
+	
+	private boolean isAirborne() {
+		return PlayerState.AIRBORNE.equals(this.state);
+	}
+	
+	private boolean isSliding() {
+		return PlayerState.SLIDING.equals(this.state);
 	}
 }
